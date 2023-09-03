@@ -3,7 +3,8 @@ import os
 from pathlib import Path
 from typing import Optional
 from collections import UserDict
-from ..Record import Record
+from app.Record import Record
+from app.Fields import NameField, PhoneField
 
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -19,7 +20,10 @@ class AddressBook(UserDict):
         except FileNotFoundError:
             print('Dictionary file not found, file will be create when you finishing your work!')
         for name, phones in dictionary.items():
-            self.add_record(name, phones)
+            name_field = NameField(name)
+            phones = [ PhoneField(phone) for phone in phones ]
+            record = Record(name_field, phones)
+            self.add_record(record)
 
     def save_book(self):
         dictionary = {}
@@ -28,9 +32,9 @@ class AddressBook(UserDict):
         with open(DICTIONARY_PATH, "w") as dictionary_file:
             json.dump(dictionary, dictionary_file) 
 
-    def add_record(self, name: str, phones: list = []) -> None:
-        if not name in self.data:
-            self.data[name] = Record(name, phones)
+    def add_record(self, record: Record) -> None:
+        if not record.name.value in self.data:
+            self.data[record.name.value] = record
 
     def get_record(self, name: str) -> Optional[Record]:
         if name in self.data:
