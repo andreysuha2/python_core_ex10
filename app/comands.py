@@ -1,4 +1,6 @@
 from app.AddressBook import AddressBook
+from app.Fields import NameField, PhoneField
+from app.Record import Record
 
 ADDRESS_BOOK = AddressBook()
 
@@ -20,7 +22,10 @@ def add_contact(*args):
     name, phones = args[0], args[1:]
     if name in ADDRESS_BOOK:
         return f'Contact with name "{name}" already exists.'
-    ADDRESS_BOOK.add_record(name, phones)
+    name_field = NameField(name)
+    phones_list = [ PhoneField(phone) for phone in phones ]
+    record = Record(name_field, phones_list)
+    ADDRESS_BOOK.add_record(record)
     return f'Contact "{name}" added to conctacts.'
 
 @input_error
@@ -29,7 +34,7 @@ def add_phones(*args):
     record = ADDRESS_BOOK.get_record(name)
     if record and len(phones):
         for phone in phones:
-            record.add_phone(phone)
+            record.add_phone(PhoneField(phone))
         return f'Phones {", ".join(phones)} added to contact "{name}"'
     elif record and not len(phones):
         return "You send empty phones list"
@@ -112,7 +117,7 @@ def help(*args):
 
         syntax: phones {name}
         description: finding phones numbers by contact name
-        example: phone ivan
+        example: phones ivan
 
         syntax: remove contact {name}
         description: removing contact from contacts list
