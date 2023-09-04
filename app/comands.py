@@ -23,7 +23,7 @@ def add_contact(*args):
     if name in ADDRESS_BOOK:
         return f'Contact with name "{name}" already exists.'
     name_field = NameField(name)
-    phones_list = [ PhoneField(phone) for phone in phones ]
+    phones_list = [ PhoneField(phone) for phone in set(phones) ]
     record = Record(name_field, phones_list)
     ADDRESS_BOOK.add_record(record)
     return f'Contact "{name}" added to conctacts.'
@@ -33,24 +33,36 @@ def add_phones(*args):
     name, phones = args[0], args[1:]
     record = ADDRESS_BOOK.get_record(name)
     if record and len(phones):
-        for phone in phones:
-            record.add_phone(PhoneField(phone))
-        return f'Phones {", ".join(phones)} added to contact "{name}"'
+        added_phones = []
+        missed_phones = []
+        response = ''
+        for phone in set(phones):
+            is_added = record.add_phone(PhoneField(phone))
+            if is_added:
+                added_phones.append(phone)
+            else:
+                missed_phones.append(phone)
+        if len(added_phones):
+            response += f'Phones {", ".join(added_phones)} added to contact "{name}"\n'
+        if len(missed_phones):
+            response += f'Phones {", ".join(missed_phones)} already exists for contact "{name}"'
+        return response
     elif record and not len(phones):
         return "You send empty phones list"
     return f'Contact with name {name} doesn\'t exist'
 
 @input_error
 def change(*args):
-    name, phone_id, phone_number = args[0], args[1], args[2]
+    name, old_phone, new_phone = args[0], args[1], args[2]
     record = ADDRESS_BOOK.get_record(name)
     if record:
-        result = record.update_phone(phone_id, phone_number)
+        result = record.update_phone(old_phone, new_phone)
         results = (
-            f'Phone with id "{phone_id}" doen\'t exist for contact {name}',
-            f'Contact phone with id "{phone_id}" was changed to {phone_number} for contact "{name}"!'
+            f'Phone {new_phone} already exists for this record',
+            f'Phone "{old_phone}" was changed to {new_phone} for contact "{name}"!',
+            f'Phone "{old_phone}" doen\'t exist for contact {name}'
         )
-        return results[bool(result)]
+        return results[int(result)]
     return f'Contact with name "{name}" doesn\'t exist.'
 
 @input_error
@@ -58,23 +70,20 @@ def phones (*args):
     name = args[0]
     record = ADDRESS_BOOK.get_record(name)
     if record:
-        string = f"Contact '{record.name.value}':\n"
-        for phone in record.phones:
-            string += f"{phone.id}: {phone.value}\n"
-        return string
+        return f"Contact '{record.name.value}': {', '.join([ phone.value for phone in record.phones ])}"
     return f'Contact with name "{name}" doesn\'t exist.'
 
 @input_error
 def remove_phone(*args):
-    name, phone_id = args[0], args[1]
+    name, phone = args[0], args[1]
     record = ADDRESS_BOOK.get_record(name)
     if record:
-        result = record.remove_phone(phone_id)
+        result = record.remove_phone(phone)
         results = (
-            f'Phone with id "{phone_id}" doen\'t exist for contact {name}',
-            f'Contact phone with id "{phone_id}" was removed from contact "{name}"!'
+            f'Contact phone with id "{phone}" was removed from contact "{name}"!',
+            f'Phone "{phone}" doen\'t exist for contact {name}'
         )
-        return results[bool(result)]
+        return results[int(result)]
     return f'Contact with "{name}" doesn\'t exist.'
 
 @input_error
@@ -111,9 +120,9 @@ def help(*args):
         description: adding number to contacts list 
         example: add phones ivan +380999999999 +380777777777
 
-        syntax: change {name} {phone_id} {phone}
+        syntax: change {name} {old_phone_number} {new_phone_number}
         description: changing phone number for contact
-        example: change ivan 1 +380999999999
+        example: change ivan +380777777777 +380999999999
 
         syntax: phones {name}
         description: finding phones numbers by contact name
@@ -123,9 +132,9 @@ def help(*args):
         description: removing contact from contacts list
         example: remove ivan
 
-        syntax: remove phone {name} {id}
+        syntax: remove phone {name} {phone_number}
         description: removing contact from contacts list
-        example: remove ivan 1
+        example: remove ivan +380999999999
 
         syntax: show all
         description: showing list of contacts
